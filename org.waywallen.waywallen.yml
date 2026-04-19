@@ -12,6 +12,7 @@ finish-args:
   - --share=ipc
   - --device=dri
   - --socket=pulseaudio
+  - --filesystem=xdg-pictures
   - --filesystem=xdg-run/waywallen:create
   - --talk-name=org.kde.StatusNotifierWatcher
   - --filesystem=~/.steam
@@ -87,42 +88,24 @@ modules:
       - &waywallen-src
         type: git
         url: https://github.com/waywallen/waywallen.git
-        commit: c274961c5948bb1fe0671970f1aa243a91d498e9
+        commit: 48b40631d73a0713fb580e435f0ddb817230d4db
       - ./cargo-sources.json
 
-  - name: waywallen-ui
+  - name: waywallen-ui-plugins
     buildsystem: cmake-ninja
     build-options:
       append-path: /usr/lib/sdk/llvm22/bin
       prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
-    subdir: ui
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
       - -DQML_INSTALL_DIR=/app/lib/qml
+      - -DCMAKE_C_COMPILER=clang
       - -DCMAKE_CXX_COMPILER=clang++
       - -DCMAKE_LINKER=lld
-      - -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=cmake/FetchDepsProvider.cmake
+      - -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=ui/cmake/FetchDepsProvider.cmake
     sources:
       - *waywallen-src
       - ./ui-deps.json
-
-  - name: waywallen-bridge
-    buildsystem: cmake-ninja
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    sources:
-      - type: git
-        url: https://github.com/waywallen/waywallen-bridge.git
-        commit: 514f8d990deedd2ce28d88322a56c02446bc8c00
-
-  - name: waywallen-mpv
-    buildsystem: cmake-ninja
-    config-opts:
-      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
-    sources:
-      - type: git
-        url: https://github.com/waywallen/waywallen-mpv.git
-        commit: 8c5159c8b6498ce1f7ede857074d643665d10437
     modules:
       - name: mpv
         buildsystem: meson
@@ -267,6 +250,5 @@ modules:
     sources:
       - type: git
         url: https://github.com/waywallen/open-wallpaper-engine.git
-        commit: 7afdecbf4dedeb55895b156f25e05ec9ee99823d
+        commit: 18e81c9c9f45f1f56c1714b25d5a0f94818afdc7
       - ./owe-deps.json
-
