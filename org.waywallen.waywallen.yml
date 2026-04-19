@@ -1,0 +1,272 @@
+app-id: org.waywallen.waywallen
+runtime: org.kde.Platform
+runtime-version: '6.10'
+sdk: org.kde.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.llvm22
+  - org.freedesktop.Sdk.Extension.rust-stable
+command: waywallen
+finish-args:
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --share=ipc
+  - --device=dri
+  - --socket=pulseaudio
+  - --filesystem=xdg-run/waywallen:create
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=~/.steam
+  - --filesystem=~/.local/share/Steam
+  - --filesystem=~/.var/app/com.valvesoftware.Steam/data/Steam
+  - --filesystem=~/snap/steam
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/doc
+  - /share/man
+  - /share/zsh
+  - /share/bash-completion
+modules:
+  - name: protobuf
+    buildsystem: cmake-ninja
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_SHARED_LIBS=ON
+      - -Dprotobuf_BUILD_TESTS=OFF
+    sources:
+      - type: git
+        url: https://github.com/protocolbuffers/protobuf.git
+        commit: 7ccf2060af4cd13c44a8659d0999be6c7a98fcc1
+        tag: v33.2
+        x-checker-data:
+          type: json
+          url: https://api.github.com/repos/protocolbuffers/protobuf/releases/latest
+          tag-query: .tag_name
+          timestamp-query: .published_at
+          version-query: $tag | sub("^[vV]"; "")
+    cleanup:
+      - '*'
+
+  - name: qt6-grpc
+    buildsystem: cmake-ninja
+    post-install:
+      - ln -s /app/lib/*-linux-gnu/*.so* /app/lib/
+    sources:
+      - type: git
+        url: https://code.qt.io/qt/qtgrpc.git
+        tag: 6.10.2
+        commit: 24c787e87e823c1bc7d3e37c7e4b4b6c0cb79e69
+
+  - name: spirv-tools
+    buildsystem: cmake-ninja
+    sources:
+      - type: git
+        url: https://github.com/KhronosGroup/SPIRV-Tools.git
+        tag: v2025.4
+        commit: 7f2d9ee926f98fc77a3ed1e1e0f113b8c9c49458
+      - type: git
+        url: https://github.com/KhronosGroup/SPIRV-Headers.git
+        tag: vulkan-sdk-1.4.335.0
+        commit: b824a462d4256d720bebb40e78b9eb8f78bbb305
+        dest: external/spirv-headers
+    cleanup:
+      - '*'
+
+  - name: waywallen
+    build-options:
+      append-path: /usr/lib/sdk/rust-stable/bin
+      env:
+        CARGO_HOME: /run/build/waywallen/cargo
+    buildsystem: simple
+    build-commands:
+      - cargo --offline fetch --manifest-path Cargo.toml --verbose
+      - cargo --offline build --release --verbose
+      - install -Dm755 ./target/release/waywallen -t /app/bin/
+    sources:
+      - &waywallen-src
+        type: git
+        url: https://github.com/waywallen/waywallen.git
+        commit: c274961c5948bb1fe0671970f1aa243a91d498e9
+      - ./cargo-sources.json
+
+  - name: waywallen-ui
+    buildsystem: cmake-ninja
+    build-options:
+      append-path: /usr/lib/sdk/llvm22/bin
+      prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
+    subdir: ui
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DQML_INSTALL_DIR=/app/lib/qml
+      - -DCMAKE_CXX_COMPILER=clang++
+      - -DCMAKE_LINKER=lld
+      - -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=cmake/FetchDepsProvider.cmake
+    sources:
+      - *waywallen-src
+      - ./ui-deps.json
+
+  - name: waywallen-bridge
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    sources:
+      - type: git
+        url: https://github.com/waywallen/waywallen-bridge.git
+        commit: 514f8d990deedd2ce28d88322a56c02446bc8c00
+
+  - name: waywallen-mpv
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    sources:
+      - type: git
+        url: https://github.com/waywallen/waywallen-mpv.git
+        commit: 8c5159c8b6498ce1f7ede857074d643665d10437
+    modules:
+      - name: mpv
+        buildsystem: meson
+        config-opts:
+          - -Dalsa=disabled
+          - -Dbuild-date=false
+          - -Dcdda=disabled
+          - -Dcplayer=false
+          - -Dcplugins=disabled
+          - -Dcuda-hwaccel=disabled
+          - -Dcuda-interop=disabled
+          - -Ddmabuf-wayland=enabled
+          - -Ddrm=enabled
+          - -Ddvbin=disabled
+          - -Ddvdnav=disabled
+          - -Degl-drm=enabled
+          - -Degl-wayland=enabled
+          - -Degl-x11=disabled
+          - -Degl=enabled
+          - -Dgbm=enabled
+          - -Dgl-x11=disabled
+          - -Dgl=enabled
+          - -Dhtml-build=disabled
+          - -Diconv=enabled
+          - -Djack=disabled
+          - -Djavascript=disabled
+          - -Djpeg=disabled
+          - -Dlcms2=disabled
+          - -Dlibarchive=disabled
+          - -Dlibavdevice=disabled
+          - -Dlibbluray=disabled
+          - -Dlibmpv=true
+          - -Dlua=disabled
+          - -Dmanpage-build=disabled
+          - -Dopenal=disabled
+          - -Dpipewire=enabled
+          - -Dplain-gl=enabled
+          - -Dpulse=disabled
+          - -Drubberband=disabled
+          - -Duchardet=disabled
+          - -Dvaapi-drm=enabled
+          - -Dvaapi-wayland=enabled
+          - -Dvaapi-x11=disabled
+          - -Dvaapi=enabled
+          - -Dvapoursynth=disabled
+          - -Dvdpau-gl-x11=disabled
+          - -Dvdpau=disabled
+          - -Dvector=enabled
+          - -Dvulkan=enabled
+          - -Dwayland=enabled
+          - -Dwerror=false
+          - -Dx11=disabled
+          - -Dxv=disabled
+          - -Dzimg=enabled
+          - -Dzlib=enabled
+        cleanup:
+          - /bin/mpv
+          - /etc/mpv
+          - /share/applications
+          - /share/icons
+
+        sources:
+          - type: git
+            url: https://github.com/mpv-player/mpv.git
+            tag: v0.41.0
+            commit: 41f6a645068483470267271e1d09966ca3b9f413
+            x-checker-data:
+              type: git
+              tag-pattern: ^v([\d.]+)$
+              is-main-source: true
+        
+        modules:
+          - name: hwdata
+            buildsystem: autotools
+            sources:
+              - type: archive
+                url: https://github.com/vcrhonek/hwdata/archive/refs/tags/v0.394.tar.gz
+                sha256: b7c3fd7214a3b7c49d2661db127a712dc11cffd1799f793947aa1cb20aaf3298
+        
+          - name: libdisplay-info
+            buildsystem: meson
+            sources:
+              - type: archive
+                url: https://gitlab.freedesktop.org/emersion/libdisplay-info/-/archive/0.2.0/libdisplay-info-0.2.0.tar.gz
+                sha256: f7331fcaf5527251b84c8fb84238d06cd2f458422ce950c80e86c72927aa8c2b
+        
+          - name: zimg
+            config-opts:
+              - --disable-static
+            sources:
+              - type: archive
+                archive-type: tar
+                url: https://api.github.com/repos/sekrit-twc/zimg/tarball/release-3.0.6
+                sha256: 15140e491c4ce9db5f02a038d8a1eb53e9151b55eeed06a2899425a6ebfef367
+                x-checker-data:
+                  type: json
+                  url: https://api.github.com/repos/sekrit-twc/zimg/releases/latest
+                  url-query: .tarball_url
+                  version-query: .tag_name | sub("^release-"; "")
+                  timestamp-query: .published_at
+        
+          - name: libplacebo
+            buildsystem: meson
+            config-opts:
+              - -Dvulkan=enabled
+              - -Dshaderc=enabled
+            sources:
+              - type: git
+                url: https://github.com/haasn/libplacebo.git
+                tag: v7.360.1
+                commit: cee9b076f2c63104ccfd497fa79c39a867293ec4
+                x-checker-data:
+                  type: git
+                  tag-pattern: ^v([\d.]+)$
+          - name: libass
+            config-opts:
+              - --disable-static
+              - --enable-asm
+              - --enable-harfbuzz
+              - --enable-fontconfig
+            sources:
+              - type: git
+                url: https://github.com/libass/libass.git
+                tag: 0.17.4
+                commit: bbb3c7f1570a4a021e52683f3fbdf74fe492ae84
+                x-checker-data:
+                  type: git
+                  tag-pattern: ^(\d\.\d{1,3}\.\d{1,2})$
+
+  - name: open-wallpaper-engine
+    buildsystem: cmake-ninja
+    build-options:
+      append-path: /usr/lib/sdk/llvm22/bin
+      prepend-ld-library-path: /usr/lib/sdk/llvm22/lib
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DCMAKE_CXX_COMPILER=clang++
+      - -DCMAKE_LINKER=lld
+      - -DQML_INSTALL_DIR=/app/lib/qml
+      - -DBUILD_TESTS=OFF
+      - -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=cmake/FetchDepsProvider.cmake
+    sources:
+      - type: git
+        url: https://github.com/waywallen/open-wallpaper-engine.git
+        commit: 7afdecbf4dedeb55895b156f25e05ec9ee99823d
+      - ./owe-deps.json
+
