@@ -88,7 +88,7 @@ modules:
       - &waywallen-src
         type: git
         url: https://github.com/waywallen/waywallen.git
-        commit: 48b40631d73a0713fb580e435f0ddb817230d4db
+        commit: dd62025d9c7ba242685e0a0c81938e084ba1e9af
       - ./cargo-sources.json
 
   - name: waywallen-ui-plugins
@@ -250,5 +250,5 @@ modules:
     sources:
       - type: git
         url: https://github.com/waywallen/open-wallpaper-engine.git
-        commit: 18e81c9c9f45f1f56c1714b25d5a0f94818afdc7
+        commit: 06c7ba0b88ef72b9581805f80c5ed2f5bae16fb1
       - ./owe-deps.json
