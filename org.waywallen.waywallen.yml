@@ -84,11 +84,12 @@ modules:
       - cargo --offline fetch --manifest-path Cargo.toml --verbose
       - cargo --offline build --release --verbose
       - install -Dm755 ./target/release/waywallen -t /app/bin/
+      - install -Dm755 ./target/release/waywallen-display-layer-shell -t /app/bin/
     sources:
       - &waywallen-src
         type: git
         url: https://github.com/waywallen/waywallen.git
-        commit: 892536e87f465a98370bf13475d0667a5b34dbec
+        commit: 5ac1dda94f0cecbddf19e7c0b6a6fabe65dd5ab4
       - ./cargo-sources.json
 
   - name: waywallen-ui-plugins
